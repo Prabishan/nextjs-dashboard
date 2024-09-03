@@ -40,6 +40,7 @@ import {
   isSameYear,
   isAfter,
   getMonth,
+  getWeek,getDay,startOfDay,endOfDay
 } from 'date-fns';
 import { get } from 'http';
 
@@ -79,6 +80,8 @@ export default function DailyReportDashboard({ invoiceData }: any) {
   });
 
   const getDataBasedOnTimeFrame = async (startDate: any, endDate: any) => {
+    console.log(startDate, "startDate")
+    console.log(endDate, "endDate")
     const response = await getReportDateRange(startDate, endDate);
     if (response.status === 'success') {
       console.log(response, 'lastWeekData');
@@ -92,8 +95,8 @@ export default function DailyReportDashboard({ invoiceData }: any) {
     let startDate, endDate;
     switch (timeFrame) {
       case 'day':
-        startDate = currentDate;
-        endDate = currentDate;
+        startDate = startOfDay(currentDate);
+        endDate = endOfDay(currentDate);
         break;
       case 'week':
         startDate = startOfWeek(currentDate);
@@ -149,12 +152,7 @@ export default function DailyReportDashboard({ invoiceData }: any) {
         return format(currentDate, 'yyyy');
     }
   };
-  const handleLastWeekClick = async () => {
-    const today = new Date();
-    const lastWeekStart = new Date();
-    lastWeekStart.setDate(today.getDate() - 7);
-    setDateRange({ from: lastWeekStart, to: today });
-  };
+  
   const isNextDisabled = () => {
     const today = new Date();
     switch (timeFrame) {
@@ -188,11 +186,81 @@ export default function DailyReportDashboard({ invoiceData }: any) {
       const month = getMonth(new Date(day.reportDate));
       monthlyData[month].totalSales += day.totalSales;
     });
-
+    console.log(monthlyData)
     return monthlyData;
   };
 
-  const chartData = timeFrame === 'year' ? aggregateMonthlyData(data) : data;
+  const preprocessWeeklyData = (data: any) => {
+    const weeklyData = data.map((item:any)=> {
+      return {
+        ...item,
+        day: format(new Date(item.reportDate), 'yyyy-MM-dd (EEE)')
+      }
+    });
+
+    console.log(weeklyData)
+    return weeklyData
+  }
+  const aggregateWeeklyData = (data: any) => {
+    const weeklyData = {
+      totalSales: 0,
+      gasSales: 0,
+      amountDifference: 0,
+    };
+  
+    data.forEach((day: any) => {
+      weeklyData.totalSales += day.totalSales;
+      weeklyData.gasSales += day.gasSale;
+      // Assuming amountDifference is calculated as totalSales - gasSales
+      weeklyData.amountDifference += day.amountDifference;
+    });
+  
+    return weeklyData;
+  };
+  
+  const aggregateYearlyData = (data: any) => {
+    const yearlyData = {
+      totalSales: 0,
+      gasSales: 0,
+      amountDifference: 0,
+    };
+  
+    data.forEach((day: any) => {
+      yearlyData.totalSales += day.totalSales;
+      yearlyData.gasSales += day.gasSale;
+      // Assuming amountDifference is calculated as totalSales - gasSales
+      yearlyData.amountDifference += day.amountDifference;
+    });
+  
+    return yearlyData;
+  };
+  
+  const aggregateDailyData = (data: any) => {
+    const dailyData = {
+      totalSales: 0,
+      gasSales: 0,
+      amountDifference: 0,
+    };
+  
+    console.log(data)
+    if (data.length > 0) {
+      const todayData = data[data.length - 1];
+      dailyData.totalSales = todayData.totalSales;
+      dailyData.gasSales = todayData.gasSale;
+      // Assuming amountDifference is calculated as totalSales - gasSales
+      dailyData.amountDifference = todayData.amountDifference;
+    }
+  
+    return dailyData;
+  };
+
+  const chartData = timeFrame === 'year' ? aggregateMonthlyData(data) : preprocessWeeklyData(data);
+  const aggregatedData =
+  timeFrame === 'day'
+    ? aggregateDailyData(data)
+    : timeFrame === 'week'
+    ? aggregateWeeklyData(data)
+    : aggregateYearlyData(data);
   return (
     <div className="container mx-auto p-4">
       <header className="mb-6 flex items-center justify-between">
@@ -258,12 +326,16 @@ export default function DailyReportDashboard({ invoiceData }: any) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Today&rsquo;s Total Sales
+            {timeFrame === 'day'
+                ? "Daily Total Sales"
+                : timeFrame === 'week'
+                ? "Weekly Total Sales"
+                : "Yearly Total Sales"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${todayData?.totalSales.toFixed(2)}
+              ${aggregatedData.totalSales.toFixed(2)}
             </div>
           </CardContent>
         </Card>
@@ -282,23 +354,35 @@ export default function DailyReportDashboard({ invoiceData }: any) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Today&rsquo;s Gas Sales
+            {timeFrame === 'day'
+                ? "Daily Gas Sales"
+                : timeFrame === 'week'
+                ? "Weekly Gas Sales"
+                : "Yearly Gas Sales"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${todayData?.gasSale.toFixed(2)}
+              ${aggregatedData.gasSales.toFixed(2)}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Today&rsquo;s Amount Difference
+            {timeFrame === 'day'
+                ? "Daily Amount Difference"
+                : timeFrame === 'week'
+                ? "Weekly Amount Difference"
+                : "Yearly Amount Difference"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">+$200.00</div>
+            <div className={`text-2xl font-bold ${Number(aggregatedData.amountDifference.toFixed(2)) == 0 ? 'text-gray-600' : Number(aggregatedData.amountDifference.toFixed(2))>0 ?'text-green-600': 'text-red-600'}`}>
+            {Number(aggregatedData.amountDifference.toFixed(2))== 0? `$0.00`: Number(aggregatedData.amountDifference.toFixed(2)) > 0 
+        ? `+$${aggregatedData.amountDifference.toFixed(2)}` 
+        : `-$${Math.abs(aggregatedData.amountDifference).toFixed(2)}`}
+              </div>
           </CardContent>
         </Card>
       </div>
@@ -387,7 +471,7 @@ export default function DailyReportDashboard({ invoiceData }: any) {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey={timeFrame === 'year' ? 'month' : 'date'} />
+                <XAxis dataKey={timeFrame === 'year' ? 'month' : 'day'} />
                 <YAxis />
                 <Tooltip />
                 <Legend />
