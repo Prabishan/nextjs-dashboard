@@ -80,8 +80,6 @@ export default function DailyReportDashboard({ invoiceData }: any) {
   });
 
   const getDataBasedOnTimeFrame = async (startDate: any, endDate: any) => {
-    console.log(startDate, "startDate")
-    console.log(endDate, "endDate")
     const response = await getReportDateRange(startDate, endDate);
     if (response.status === 'success') {
       console.log(response, 'lastWeekData');
@@ -186,7 +184,7 @@ export default function DailyReportDashboard({ invoiceData }: any) {
       const month = getMonth(new Date(day.reportDate));
       monthlyData[month].totalSales += day.totalSales;
     });
-    console.log(monthlyData)
+
     return monthlyData;
   };
 
@@ -198,7 +196,6 @@ export default function DailyReportDashboard({ invoiceData }: any) {
       }
     });
 
-    console.log(weeklyData)
     return weeklyData
   }
   const aggregateWeeklyData = (data: any) => {
@@ -242,7 +239,6 @@ export default function DailyReportDashboard({ invoiceData }: any) {
       amountDifference: 0,
     };
   
-    console.log(data)
     if (data.length > 0) {
       const todayData = data[data.length - 1];
       dailyData.totalSales = todayData.totalSales;

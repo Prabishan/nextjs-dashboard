@@ -259,7 +259,9 @@ export default function InvoiceTable(props: InvoiceTableProps) {
                       : 'bg-red-200 text-red-800'
                   }`}
                 >
-                  ${item.amountDifference.toFixed(2)}
+                  {Number(item.amountDifference.toFixed(2))== 0? `$0.00`: Number(item.amountDifference.toFixed(2)) > 0 
+        ? `+$${item.amountDifference.toFixed(2)}` 
+        : `-$${Math.abs(item.amountDifference).toFixed(2)}`}
                 </span>
               </TableCell>
               <TableCell>
